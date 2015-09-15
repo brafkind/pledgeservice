@@ -763,12 +763,10 @@ class StatesHandler(webapp2.RequestHandler):
       logging.info('Recomputing states totals.')
       memcache.set(StatesHandler.TIME_KEY, now)
       totals = {}
-      for pledge in model.Pledge.all():
-        user = model.User.all().filter('email =', pledge.email).get()
+      for user in model.User.all().run(batch_size=100):
+        pledge = model.Pledge.all().filter('email =', user.email).get()
         totals.setdefault(user.state, 0)
-        totals[user.state] += min(pledge.amountCents, 25000) # max $250
-      for state, total in totals.iteritems():
-        totals[state] = min(500000, total) # no point counting past $5k
+        totals[user.state] += pledge.amountCents
       value = json.dumps(totals);
       self.response.write(value)
       memcache.set(StatesHandler.VALUE_KEY, value)
